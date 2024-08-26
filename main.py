@@ -1,6 +1,6 @@
 import os
 import datetime
-import pytz
+from pytz import timezone
 
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
@@ -51,9 +51,12 @@ def get_publish_datetime(
 
     public_datetime = datetime.datetime.fromisoformat(latest_public_date)
     new_upload_datetime = public_datetime + datetime.timedelta(days=private_video_count + 1)
+
     new_publish_datetime = datetime.datetime.combine(
-        new_upload_datetime.date(), datetime.time.fromisoformat("00:00:00")
-    ).astimezone(pytz.timezone("America/Los_Angeles"))
+        new_upload_datetime.date(),
+        datetime.time(0, 0, 0, 0, tzinfo=timezone("America/Los_Angeles")),
+        tzinfo=timezone("America/Los_Angeles"),
+    )
 
     print(f"Found {private_video_count} private videos")
     print(f"Found {latest_public_date} as the latest public video date")
@@ -68,21 +71,23 @@ def upload_video(
     youtube: googleapiclient.discovery.Resource,
     mimetype: str = "video/mkv",
 ) -> None:
-
     request_body = {
         "snippet": {
             "title": title,
             "categoryId": "1",
         },
-        "status": {"privacyStatus": "private", "publishTime": publish_time.isoformat()},
+        "status": {
+            "privacyStatus": "private",
+            "publishAt": publish_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        },
     }
 
-    chunk_size = 1024 * 1024 * 5 # 5 MB chunks
+    chunk_size = 1024 * 1024 * 5  # 5 MB chunks
     media_body = MediaFileUpload(
         video_file, chunksize=chunk_size, mimetype=mimetype, resumable=True
     )
 
-    response = input(f"Start upload of {title} using {video_file}, proceed? (y/n)").lower()
+    response = input(f"Start upload of '{title}' using '{video_file}', proceed? (y/n)").lower()
     if response == "y":
         print("Continuing...")
     else:
@@ -94,7 +99,11 @@ def upload_video(
         .execute()
     )
 
-    print(response)
+    video_id = response["id"]
+
+    print(
+        f"'{title}' uploaded successfully with video id {video_id}. It will be published at {publish_time.date()}"
+    )
 
 
 def main():
