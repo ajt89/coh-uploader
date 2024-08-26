@@ -7,5 +7,7 @@ clean:
 	- python -m pipenv --rm
 
 format:
-	- python -m pipenv run isort .;\
-	python -m pipenv run black .
+	- python -m pipenv run black --line-length 100 .
+
+run:
+	- python -m pipenv run python main.py
