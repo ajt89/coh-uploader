@@ -7,7 +7,6 @@ name = "pypi"
 click = "==8.1.7"
 google-api-python-client = "==2.142.0"
 google-auth-oauthlib = "==1.2.1"
-pytz = "==2024.1"
 
 [dev-packages]
 black = "==22.3.0"

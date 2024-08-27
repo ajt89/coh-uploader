@@ -1,6 +1,5 @@
 import os
 import datetime
-from pytz import timezone
 
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
@@ -54,8 +53,7 @@ def get_publish_datetime(
 
     new_publish_datetime = datetime.datetime.combine(
         new_upload_datetime.date(),
-        datetime.time(0, 0, 0, 0, tzinfo=timezone("America/Los_Angeles")),
-        tzinfo=timezone("America/Los_Angeles"),
+        datetime.time(7, 0, 0, 0),
     )
 
     print(f"Found {private_video_count} private videos")
