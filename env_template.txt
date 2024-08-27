@@ -1,0 +1,3 @@
+CHANNEL_ID=<channel-id-here>
+FILE_PATH=<full-file-path-here>
+TITLE="<desired-title-here>"
