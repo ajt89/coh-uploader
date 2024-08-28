@@ -1,5 +1,6 @@
 import os
 import datetime
+import sys
 
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
@@ -90,6 +91,7 @@ def upload_video(
         print("Continuing...")
     else:
         print("Aborting!")
+        sys.exit()
 
     response = (
         youtube.videos()
