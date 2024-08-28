@@ -2,24 +2,24 @@ import os
 import datetime
 import sys
 
+import click
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
 import googleapiclient.errors
 from googleapiclient.http import MediaFileUpload
 
 scopes = ["https://www.googleapis.com/auth/youtube"]
-CHANNEL_ID = os.getenv("CHANNEL_ID")
 FILE_PATH = os.getenv("FILE_PATH")
 TITLE = os.getenv("TITLE")
 
 
 def get_publish_datetime(
-    channel_id: str,
     youtube: googleapiclient.discovery.Resource,
-    search_title: str = "Company of Heroes 3",
+    search_title: str = "Company of Heroes 3 ",
+    private_video_count: int = -1,
 ) -> datetime.datetime:
     # Retrieve the channel's upload playlist ID
-    request = youtube.channels().list(part="contentDetails", id=channel_id)
+    request = youtube.channels().list(part="contentDetails", mine=True)
     response = request.execute()
     upload_playlist_id = response["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
 
@@ -30,13 +30,27 @@ def get_publish_datetime(
     )
     playlist_items_response = playlist_items_request.execute()
     all_videos = playlist_items_response["items"]
+    next_page_token = playlist_items_response.get("nextPageToken")
 
-    private_videos = [
-        video
-        for video in all_videos
-        if search_title in video["snippet"]["title"]
-        and video["status"]["privacyStatus"] == "private"
-    ]
+    while next_page_token:
+        playlist_items_request = youtube.playlistItems().list(
+            part="snippet,contentDetails,status",
+            playlistId=upload_playlist_id,
+            pageToken=next_page_token,
+        )
+        playlist_items_response = playlist_items_request.execute()
+        all_videos.extend(playlist_items_response["items"])
+        next_page_token = playlist_items_response.get("nextPageToken")
+
+    if private_video_count == -1:
+        private_videos = [
+            video
+            for video in all_videos
+            if search_title in video["snippet"]["title"]
+            and video["status"]["privacyStatus"] == "private"
+        ]
+        private_video_count = len(private_videos)
+
     public_videos = [
         video
         for video in all_videos
@@ -48,7 +62,7 @@ def get_publish_datetime(
     sorted_public_videos = sorted(
         public_videos, key=lambda x: x["snippet"]["publishedAt"], reverse=True
     )
-    private_video_count = len(private_videos)
+
     latest_public_date = sorted_public_videos[0]["snippet"]["publishedAt"]
 
     public_datetime = datetime.datetime.fromisoformat(latest_public_date)
@@ -110,7 +124,7 @@ def upload_video(
     )
 
 
-def main():
+def google_yt_oauth() -> googleapiclient.discovery.Resource:
     # Disable OAuthlib's HTTPS verification when running locally.
     # *DO NOT* leave this option enabled in production.
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
@@ -127,8 +141,14 @@ def main():
     youtube = googleapiclient.discovery.build(
         api_service_name, api_version, credentials=credentials
     )
+    return youtube
 
-    publish_datetime = get_publish_datetime(CHANNEL_ID, youtube)
+
+@click.command()
+@click.option("--private-video-count", required=False, default=-1, type=int)
+def main(private_video_count: int):
+    youtube = google_yt_oauth()
+    publish_datetime = get_publish_datetime(youtube, private_video_count=private_video_count)
     upload_video(FILE_PATH, TITLE, publish_datetime, youtube)
 
 

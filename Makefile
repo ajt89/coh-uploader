@@ -9,5 +9,8 @@ clean:
 format:
 	- python -m pipenv run black --line-length 100 .
 
-run:
+run-no-args:
 	- python -m pipenv run python main.py
+
+run-private-video-count:
+	- python -m pipenv run python main.py --private-video-count ${PRIVATE_VIDEO_COUNT}
