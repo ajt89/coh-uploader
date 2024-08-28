@@ -16,7 +16,7 @@ TITLE = os.getenv("TITLE")
 def get_publish_datetime(
     channel_id: str,
     youtube: googleapiclient.discovery.Resource,
-    title: str = "Company of Heroes 3",
+    search_title: str = "Company of Heroes 3",
 ) -> datetime.datetime:
     # Retrieve the channel's upload playlist ID
     request = youtube.channels().list(part="contentDetails", id=channel_id)
@@ -34,12 +34,14 @@ def get_publish_datetime(
     private_videos = [
         video
         for video in all_videos
-        if title in video["snippet"]["title"] and video["status"]["privacyStatus"] == "private"
+        if search_title in video["snippet"]["title"]
+        and video["status"]["privacyStatus"] == "private"
     ]
     public_videos = [
         video
         for video in all_videos
-        if title in video["snippet"]["title"] and video["status"]["privacyStatus"] == "public"
+        if search_title in video["snippet"]["title"]
+        and video["status"]["privacyStatus"] == "public"
     ]
 
     # Sort the videos locally by published date
@@ -65,14 +67,14 @@ def get_publish_datetime(
 
 def upload_video(
     video_file: str,
-    title: str,
+    video_title: str,
     publish_time: datetime.datetime,
     youtube: googleapiclient.discovery.Resource,
     mimetype: str = "video/mkv",
 ) -> None:
     request_body = {
         "snippet": {
-            "title": title,
+            "title": video_title,
             "categoryId": "1",
         },
         "status": {
@@ -86,7 +88,9 @@ def upload_video(
         video_file, chunksize=chunk_size, mimetype=mimetype, resumable=True
     )
 
-    response = input(f"Start upload of '{title}' using '{video_file}', proceed? (y/n)").lower()
+    response = input(
+        f"Start upload of '{video_title}' using '{video_file}', proceed? (y/n)"
+    ).lower()
     if response == "y":
         print("Continuing...")
     else:
@@ -102,7 +106,7 @@ def upload_video(
     video_id = response["id"]
 
     print(
-        f"'{title}' uploaded successfully with video id {video_id}. It will be published at {publish_time.date()}"
+        f"'{video_title}' uploaded successfully with video id {video_id}. It will be published at {publish_time.date()}"
     )
 
 
